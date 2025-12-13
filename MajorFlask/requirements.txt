@@ -1,0 +1,6 @@
+gradio>=3.38
+groq
+python-dotenv
+pydub
+SpeechRecognition
+requests
