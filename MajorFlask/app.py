@@ -3,6 +3,7 @@
 # -----------------------------------------
 
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import os
 from dotenv import load_dotenv
 load_dotenv()
@@ -16,6 +17,7 @@ if GROQ_API_KEY is None:
     raise ValueError("GROQ_API_KEY is not set! Add it to .env or environment variables.")
 
 app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # -----------------------------------------
 # System Prompt for Doctor
@@ -61,9 +63,12 @@ def process_inputs(audio_filepath, image_filepath=None):
     return speech_to_text_output, doctor_response
 
 
-# -----------------------------------------
-# API Endpoint
-# -----------------------------------------
+@app.route("/", methods=["GET"])
+def endpoint():
+    return "Server runnig"
+
+
+
 @app.route("/process", methods=["POST"])
 def process_api():
     """
@@ -91,15 +96,26 @@ def process_api():
     # Process through your pipeline
     stt_output, doctor_response = process_inputs(audio_path, image_path)
 
+    # Remove saved temporary files just before sending the response
+    try:
+        if audio_path and os.path.exists(audio_path):
+            os.remove(audio_path)
+    except Exception as e:
+        print(f"Warning: failed to remove audio file {audio_path}: {e}")
+
+    try:
+        if image_path and os.path.exists(image_path):
+            os.remove(image_path)
+    except Exception as e:
+        print(f"Warning: failed to remove image file {image_path}: {e}")
+
     return jsonify({
         "speech_to_text": stt_output,
         "doctor_response": doctor_response
     })
 
 
-# -----------------------------------------
-# Run Server
-# -----------------------------------------
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
